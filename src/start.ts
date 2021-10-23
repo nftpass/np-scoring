@@ -4,6 +4,7 @@ import AWS from "aws-sdk";
 import MongoInterface from "./mongoInterface";
 import FirebaseInterface from "./firebaseInterface";
 import DataRetriever from "./dataRetriever";
+import PoapRetriever from "./poapRetriever";
 
 require("dotenv").config();
 
@@ -23,8 +24,10 @@ const pathToCredentails = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
 const firebase = new FirebaseInterface(pathToCredentails, databaseURL, projectId);
 
 const retriever = new DataRetriever(process.env.COVALENT_API_KEY || '');
+// const priceRetriever = new PriceRetriever(process.env.NFT_BANK_API_KEY || '');
+const poapRetriever = new PoapRetriever();
 
-const scorer = new Scorer(mongo, firebase, retriever)
+const scorer = new Scorer(mongo, firebase, retriever, poapRetriever);
 
 const start = () => {
     const app = Consumer.create({

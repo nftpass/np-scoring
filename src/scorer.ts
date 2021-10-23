@@ -1,17 +1,21 @@
 import MongoInterface from "./mongoInterface";
 import FirebaseInterface from "./firebaseInterface";
 import DataRetriever from "./dataRetriever";
+import PriceRetriever from "./priceRetriever";
+import PoapRetriever from "./poapRetriever";
 import * as moment from 'moment';
 
 class Scorer {
     mongo: MongoInterface;
     firebase: FirebaseInterface;
     dataRetriever: DataRetriever;
+    poapRetriever: PoapRetriever;
 
-    constructor(mongo: MongoInterface, firebase: FirebaseInterface, dataRetriever: DataRetriever) {
+    constructor(mongo: MongoInterface, firebase: FirebaseInterface, dataRetriever: DataRetriever, poapRetriever: PoapRetriever) {
         this.mongo = mongo;
         this.firebase = firebase;
         this.dataRetriever = dataRetriever;
+        this.poapRetriever = poapRetriever;
     }
 
     async init(callback: any){
