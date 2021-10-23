@@ -68,6 +68,7 @@ class Scorer {
             const pieces = collections[i].nft_data;
             for (let j = 0; j < pieces.length; j++) {
                 // piece score = collectior_score * price component
+                // @todo: add the individual piece price
                 let pieceScore = collGrade * 1
                 // if minted, then dobule piece score (?)
                 totalScore += pieceScore
