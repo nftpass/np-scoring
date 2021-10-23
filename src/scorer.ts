@@ -27,7 +27,7 @@ class Scorer {
         return this.mongo.getHistoricalScore(address);
     }
 
-    async getScore(address: string): Promise<number> {
+    async computeAndStoreScore(address: string): Promise<number> {
         const cachedScore = await this.getCachedScore(address);
         console.log(`Cached score for ${address} is ${cachedScore}`)
         if (cachedScore) { //@todo: when was it cached?
@@ -72,6 +72,7 @@ class Scorer {
             const pieces = collections[i].nft_data;
             for (let j = 0; j < pieces.length; j++) {
                 // piece score = collectior_score * price component
+                // @todo: add the individual piece price
                 let pieceScore = collGrade * 1
                 // if minted, then dobule piece score (?)
                 totalScore += pieceScore
