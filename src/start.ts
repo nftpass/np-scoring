@@ -30,7 +30,7 @@ const start = () => {
     const app = Consumer.create({
         queueUrl: process.env.SQS_QUEUE_URL,
         handleMessage: async (message: any) => {
-            scorer.getScore(message.Body)
+            scorer.computeAndStoreScore(message.Body)
         },
         sqs: new AWS.SQS()
     });

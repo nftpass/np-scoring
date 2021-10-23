@@ -23,7 +23,7 @@ class Scorer {
         return this.mongo.getHistoricalScore(address);
     }
 
-    async getScore(address: string): Promise<number> {
+    async computeAndStoreScore(address: string): Promise<number> {
         const cachedScore = await this.getCachedScore(address);
         console.log(`Cached score for ${address} is ${cachedScore}`)
         if (cachedScore) { //@todo: when was it cached?
