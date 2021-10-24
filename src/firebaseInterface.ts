@@ -17,7 +17,9 @@ export default class FirebaseInterface {
     }
 
     async persistScore(address: string, score: number) {
-        set(ref(this.firebaseDB, 'score/' + address), {
+        const path = '/score/' + address;
+        console.log(`Assigning to eo_address ${address} -> ${score} in Firebase using the path: ${path}`)
+        set(ref(this.firebaseDB, path), {
             "address": address,
             "score": score,
             "last_updated": new Date().toISOString()

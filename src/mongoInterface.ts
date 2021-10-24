@@ -24,7 +24,7 @@ export default class MongoInterface {
         this.nftCollectionScoreCol = this.db.collection('nftCollectionScore');
     }
 
-    async getHistoricalScore(address: string): Promise<any> {
+    async getAddressHistoricalScore(address: string): Promise<any> {
         if (this.historicalRecordsCol){
             return await this.historicalRecordsCol.findOne({'address': address})
         }
@@ -32,13 +32,13 @@ export default class MongoInterface {
 
     async getNFTCollectionScore(contract_address: string): Promise<any> {
         if (this.nftCollectionScoreCol){
-            return await this.nftCollectionScoreCol.findOne({'contract_address': contract_address})
+            return await this.nftCollectionScoreCol.findOne({'address': contract_address})
         }
     }
 
     async getNFTCollectionsScoreInBulk(contract_addresses: string[]): Promise<any> {
         if (this.nftCollectionScoreCol){
-            return await this.nftCollectionScoreCol.find({'contract_address': {'$in': contract_addresses}}).sort({'grade': 1}).toArray()
+            return await this.nftCollectionScoreCol.find({'address': {'$in': contract_addresses}}).sort({'grade': 1}).toArray()
         }
     }
 
@@ -47,7 +47,20 @@ export default class MongoInterface {
             return await this.nftCollectionScoreCol.insertOne({
                 'address': contract_address,
                 'grade': grade,
-                'name': name
+                'name': name,
+                'inserted_at': new Date(),
+                'updated_at': new Date()
+            })
+        }
+    }
+
+    async setAddressScore(address: string, score: number): Promise<any> {
+        if (this.historicalRecordsCol){
+            return await this.historicalRecordsCol.insertOne({
+                'address': address,
+                'score': score,
+                'inserted_at': new Date(),
+                'updated_at': new Date()
             })
         }
     }

@@ -3,7 +3,8 @@ import Scorer from "./scorer";
 import AWS from "aws-sdk";
 import MongoInterface from "./mongoInterface";
 import FirebaseInterface from "./firebaseInterface";
-import DataRetriever from "./dataRetriever";
+import CovalentDataRetriever from "./covalentDataRetriever";
+import OpenSeaDataRetriever from "./openSeaDataRetriever";
 
 require("dotenv").config();
 
@@ -22,15 +23,21 @@ const projectId = process.env.FIREBASE_PROJECT_ID || '';
 const pathToCredentails = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
 const firebase = new FirebaseInterface(pathToCredentails, databaseURL, projectId);
 
-const retriever = new DataRetriever(process.env.COVALENT_API_KEY || '');
+const covalentRetriever = new CovalentDataRetriever(process.env.COVALENT_API_KEY || '');
+const openSeaDataRetriever = new OpenSeaDataRetriever();
 
-const scorer = new Scorer(mongo, firebase, retriever)
+const scorer = new Scorer(mongo, firebase, covalentRetriever, openSeaDataRetriever);
+
+// const re = '0x[a-fA-F0-9]{40}'
+// const ethRegex = new RegExp(re, 'g')
 
 const start = () => {
     const app = Consumer.create({
         queueUrl: process.env.SQS_QUEUE_URL,
         handleMessage: async (message: any) => {
-            scorer.computeAndStoreScore(message.Body)
+            console.log('***New message received***')
+            const address = message.Body;
+            scorer.computeAndStoreScore(address.toLowerCase());
         },
         sqs: new AWS.SQS()
     });
