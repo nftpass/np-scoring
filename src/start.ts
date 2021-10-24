@@ -7,7 +7,6 @@ import CovalentDataRetriever from "./covalentDataRetriever";
 import OpenSeaDataRetriever from "./openSeaDataRetriever";
 import PoapRetriever from "./poapRetriever";
 
-
 require("dotenv").config();
 
 AWS.config.update({
