@@ -21,7 +21,8 @@ export default class CovalentDataRetriever {
         let collections = [];
         if (data && data.data){
             collections = data['data']['items'].filter((item: any) => {
-                return item.nft_data
+                //if NFT or it's an ENS (0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85) which doesn't have NFT_DATA unfortunately
+                return item.nft_data || item.contract_address == "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85"
             })
         } else {
             console.log(`No data return from Covalent for token balance address ${address}`)

@@ -1,6 +1,6 @@
 const axios = require('axios').default;
 
-export default class PriceRetriever {
+export default class POAPRetriever {
 
     POAP_API_HOST: string;
 

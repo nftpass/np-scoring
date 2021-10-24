@@ -6,6 +6,13 @@ import PoapRetriever from "./poapRetriever";
 const moment = require('moment');
 
 
+type ScoreComponent = {
+    collectionName: string;
+    points: number;
+    contractAddress: string;
+};
+
+
 class Scorer {
     mongo: MongoInterface;
     firebase: FirebaseInterface;
@@ -42,18 +49,25 @@ class Scorer {
             return cachedScore;
         }
         const computedScore = await this.computeScore(address);
-        this.firebase.persistScore(address, computedScore)
-        this.mongo.setAddressScore(address, computedScore)
+        const totalScore = computedScore.totalScore;
+        const scoreComponents = computedScore.scoreComponents;
+        this.firebase.persistScore(address, totalScore);
+        this.firebase.persistScoreComponents(address, scoreComponents);
+        this.mongo.setAddressScore(address, totalScore);
         return computedScore;
     }
 
-    async computeScore(address: string, chain_id: number = 1): Promise<number> {
+    async computeScore(address: string, chain_id: number = 1): Promise<any> {
         console.log(`Computing score for eo_address: ${address}`)
         let totalScore = 0;
         let data = await this.covalentDataRetriever.getNFTOverviewForAddress(address, chain_id, true);
         const collections = data['collections'];
         const contract_addresses = collections.map((col: any) => {return col.contract_address})
         const collGrades = await this.mongo.getNFTCollectionsScoreInBulk(contract_addresses);
+
+
+        //let keeping track of how we got to the score
+        let scoreComponentsArr: Array<ScoreComponent> = [];
 
         // Creating a map for fast retrieval
         type CollectionGrade = {
@@ -67,10 +81,13 @@ class Scorer {
             collGradesMap.set(coll.address, coll);
         })
 
+        //All collections retrieved from Covalent
         for (let i = 0; i < collections.length; i++) {
             const collContractAddress = collections[i].contract_address;
             const collGradeObj = collGradesMap.get(collContractAddress);
-            let collGrade = collGradeObj ? collGradeObj['grade'] : undefined;
+            let collGrade = collGradeObj ? collGradeObj['grade'] : 1;
+            let collName = collGradeObj ? collGradeObj['name'] : '';
+            let collAddress = collGradeObj ? collGradeObj['address'] : '';
 
             //compute collection grade on the fly if we don't have it
             if (!collGrade){
@@ -79,18 +96,43 @@ class Scorer {
             }
 
             totalScore += collGrade;
-            const pieces = collections[i].nft_data;
-            for (let j = 0; j < pieces.length; j++) {
-                // piece score = collectior_score * price component
-                // @todo: add the individual piece price
-                let pieceScore = collGrade * 1
-                // if minted, then dobule piece score (?)
-                totalScore += pieceScore
-            }
+            scoreComponentsArr = this.addScoreComponentToArr(scoreComponentsArr, collGrade, collName, collAddress);
 
+            const pieces = collections[i].nft_data;
+            if(pieces){
+                for (let j = 0; j < pieces.length; j++) {
+                    // piece score = collectior_score * price component
+                    // @todo: add the individual piece price
+                    let pieceScore = collGrade * 1
+                    // @todo: if minted, then dobule piece score
+                    totalScore += pieceScore
+                }
+            }
         }
-        console.log(`Computed ${totalScore} and asssigned to eo_address: ${address}`)
-        return totalScore
+
+
+        //All POAP scoring
+        let poapScore = 0;
+        const realWorldBadgePoints = 50;
+        const virtualWorldBadgePoints = 5;
+        const poapEvents = await this.poapRetriever.getPoapEvents(address);
+        if(poapEvents) {
+            let realWorldScore = realWorldBadgePoints * poapEvents.realworld;
+            let virtualWorldScore = virtualWorldBadgePoints * poapEvents.metaverse;
+            poapScore = realWorldScore + virtualWorldScore;
+            scoreComponentsArr = this.addScoreComponentToArr(scoreComponentsArr, realWorldScore, 'POAP - Real World', '');
+            scoreComponentsArr = this.addScoreComponentToArr(scoreComponentsArr, virtualWorldScore, 'POAP - Virtual World', '');
+        }
+
+        console.log(`Poapscore is ${poapScore} for ${address}`)
+        totalScore+=poapScore
+
+
+        console.log(`Total score computed ${totalScore} and asssigned to eo_address: ${address}`)
+        return {
+            'totalScore': totalScore,
+            'scoreComponents': scoreComponentsArr
+        }
     }
 
     async computeAndStoreCollectionScore(contract_address: string, owner_address: string, chain_id: number = 1){
@@ -122,6 +164,15 @@ class Scorer {
         this.mongo.setNFTCollectionGrade(contract_address, grade, covalentData.contract_name);
 
         return grade;
+    }
+
+    addScoreComponentToArr(arr: Array<ScoreComponent>, score: number, colName: string, colAddress: string): Array<ScoreComponent>{
+        arr.push({
+            'collectionName': colName,
+            'points': score,
+            'contractAddress': colAddress,
+        })
+        return arr;
     }
 
 }

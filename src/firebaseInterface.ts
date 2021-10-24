@@ -2,6 +2,12 @@ import { getDatabase, ref, set } from "firebase/database";
 import admin from "firebase-admin";
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
 
+type ScoreComponent = {
+    collectionName: string;
+    points: number;
+    contractAddress: string;
+};
+
 export default class FirebaseInterface {
     firebaseApp: any;
     firebaseDB: any;
@@ -22,6 +28,16 @@ export default class FirebaseInterface {
         set(ref(this.firebaseDB, path), {
             "address": address,
             "score": score,
+            "last_updated": new Date().toISOString()
+        });
+    }
+
+    async persistScoreComponents(address: string, scoreComponents: Array<ScoreComponent>) {
+        const path = '/scoreBreakdown/' + address;
+        console.log(`Assigning score breakdown to eo_address ${address} in Firebase using the path: ${path}`)
+        set(ref(this.firebaseDB, path), {
+            "address": address,
+            "scoreComponents": scoreComponents,
             "last_updated": new Date().toISOString()
         });
     }
