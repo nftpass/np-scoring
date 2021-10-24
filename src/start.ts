@@ -5,6 +5,8 @@ import MongoInterface from "./mongoInterface";
 import FirebaseInterface from "./firebaseInterface";
 import CovalentDataRetriever from "./covalentDataRetriever";
 import OpenSeaDataRetriever from "./openSeaDataRetriever";
+import PoapRetriever from "./poapRetriever";
+
 
 require("dotenv").config();
 
@@ -23,13 +25,16 @@ const projectId = process.env.FIREBASE_PROJECT_ID || '';
 const pathToCredentails = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
 const firebase = new FirebaseInterface(pathToCredentails, databaseURL, projectId);
 
+
 const covalentRetriever = new CovalentDataRetriever(process.env.COVALENT_API_KEY || '');
 const openSeaDataRetriever = new OpenSeaDataRetriever();
+const poapRetriever = new PoapRetriever();
 
-const scorer = new Scorer(mongo, firebase, covalentRetriever, openSeaDataRetriever);
+const scorer = new Scorer(mongo, firebase, covalentRetriever, openSeaDataRetriever, poapRetriever);
 
 // const re = '0x[a-fA-F0-9]{40}'
 // const ethRegex = new RegExp(re, 'g')
+
 
 const start = () => {
     const app = Consumer.create({

@@ -2,20 +2,24 @@ import MongoInterface from "./mongoInterface";
 import FirebaseInterface from "./firebaseInterface";
 import CovalentDataRetriever from "./covalentDataRetriever";
 import OpenSeaDataRetriever from "./openSeaDataRetriever";
+import PoapRetriever from "./poapRetriever";
 const moment = require('moment');
+
 
 class Scorer {
     mongo: MongoInterface;
     firebase: FirebaseInterface;
     covalentDataRetriever: CovalentDataRetriever;
     openSeaDataRetriever: OpenSeaDataRetriever;
+    poapRetriever: PoapRetriever;
 
     constructor(mongo: MongoInterface, firebase: FirebaseInterface,
-                covalentDataRetriever: CovalentDataRetriever, openSeaDataRetriever: OpenSeaDataRetriever) {
+                covalentDataRetriever: CovalentDataRetriever, openSeaDataRetriever: OpenSeaDataRetriever, poapRetriever: PoapRetriever) {
         this.mongo = mongo;
         this.firebase = firebase;
         this.covalentDataRetriever = covalentDataRetriever;
         this.openSeaDataRetriever = openSeaDataRetriever;
+        this.poapRetriever = poapRetriever;
     }
 
     async init(callback: any){
