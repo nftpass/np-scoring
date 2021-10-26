@@ -106,8 +106,6 @@ class Scorer {
 
             const pieces = collections[i].nft_data;
             if(pieces){
-                console.log('pieces.length')
-                console.log(pieces.length)
                 for (let j = 0; j < pieces.length; j++) {
                     // piece score = collectior_score * price component
                     // @todo: add the individual piece price
