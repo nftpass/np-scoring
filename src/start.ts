@@ -1,11 +1,11 @@
 import  {Consumer} from "sqs-consumer";
 import Scorer from "./scorer";
 import AWS from "aws-sdk";
-import MongoInterface from "./mongoInterface";
-import FirebaseInterface from "./firebaseInterface";
-import CovalentDataRetriever from "./covalentDataRetriever";
-import OpenSeaDataRetriever from "./openSeaDataRetriever";
-import PoapRetriever from "./poapRetriever";
+import MongoInterface from "./persisters/mongoInterface";
+import FirebaseInterface from "./persisters/firebaseInterface";
+import CovalentDataRetriever from "./retrievers/covalentDataRetriever";
+import OpenSeaDataRetriever from "./retrievers/openSeaDataRetriever";
+import PoapRetriever from "./retrievers/poapRetriever";
 
 require("dotenv").config();
 
@@ -23,7 +23,6 @@ const databaseURL = process.env.FIREBASE_DATABASE_URL || '';
 const projectId = process.env.FIREBASE_PROJECT_ID || '';
 const pathToCredentails = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
 const firebase = new FirebaseInterface(pathToCredentails, databaseURL, projectId);
-
 
 const covalentRetriever = new CovalentDataRetriever(process.env.COVALENT_API_KEY || '');
 const openSeaDataRetriever = new OpenSeaDataRetriever();

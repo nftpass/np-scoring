@@ -20,7 +20,7 @@ export default class OpenSeaDataRetriever {
 
     async getNFTCollectionStats(contract_address: string, owner_address: string){
         const collections = await this.getNFTCollectionsForAddress(owner_address);
-        let wantedCollection = {stats:{total_volume: 0}};
+        let wantedCollection = {'stats':{'total_volume': 0}};
         collections && collections.forEach((col: any) => {
             const contract = col.primary_asset_contracts[0]
             if(contract && contract.address == contract_address){
