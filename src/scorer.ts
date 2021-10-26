@@ -95,8 +95,6 @@ class Scorer {
             let collName = collGradeObj ? collGradeObj['name'] : '';
             let collAddress = collGradeObj ? collGradeObj['address'] : '';
 
-            console.log(collGradeObj)
-
             //compute collection grade on the fly if we don't have it
             if (!collGrade){
                 console.log(`Collection grade not available for ${collContractAddress}`)
