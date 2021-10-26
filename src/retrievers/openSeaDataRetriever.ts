@@ -31,6 +31,20 @@ export default class OpenSeaDataRetriever {
         return wantedCollection;
     }
 
+    async getMapFloorPricePerPiece(owner_address: string){
+        const collections = await this.getNFTCollectionsForAddress(owner_address);
+        // console.log(collections )
+        // let wantedCollection = {'stats':{'total_volume': 0}};
+        // collections && collections.forEach((col: any) => {
+        //     const contract = col.primary_asset_contracts[0]
+        //     if(contract && contract.address == contract_address){
+        //         console.log('matches')
+        //         wantedCollection = col;
+        //     }
+        // })
+        // return wantedCollection;
+    }
+
     async requestForOpenSea(path: string, query: any = {}){
         try {
             const url = `${this.API_HOST}${path}?${querystring.stringify(query)}`;

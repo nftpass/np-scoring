@@ -1,7 +1,9 @@
+const moment = require('moment');
 import MongoInterface from "./persisters/mongoInterface";
 import FirebaseInterface from "./persisters/firebaseInterface";
 import MockMongoInterface from "./persisters/mock/mockMongoInterface";
 import MockFirebaseInterface from "./persisters/mock/mockFirebaseInterface";
+
 import CovalentDataRetriever from "./retrievers/covalentDataRetriever";
 import OpenSeaDataRetriever from "./retrievers/openSeaDataRetriever";
 import PoapRetriever from "./retrievers/poapRetriever";
@@ -9,12 +11,10 @@ import MockCovalentDataRetriever from "./retrievers/mock/mockCovalentDataRetriev
 import MockOpenSeaDataRetriever from "./retrievers/mock/mockOpenSeaDataRetriever";
 import MockPoapRetriever from "./retrievers/mock/mockPoapRetriever";
 
+import CollectionGrade from "./interfaces/collectionGradeType";
 import ScoreComponent from "./interfaces/scoreComponentType";
+
 import ScorerBreakdownTracker from "./scoreBreakdownTracker";
-
-const moment = require('moment');
-
-
 
 
 class Scorer {
@@ -76,12 +76,6 @@ class Scorer {
 
 
         // Creating a map for fast retrieval
-        type CollectionGrade = {
-            grade: number;
-            address: string;
-            name: string;
-            _id: string;
-        };
         const collGradesMap = new Map<string, CollectionGrade>();
         collGrades.forEach((coll:CollectionGrade) => {
             collGradesMap.set(coll.address, coll);
@@ -127,10 +121,10 @@ class Scorer {
         let poapScore = 0;
         let realWorldScore = 0;
         let virtualWorldScore = 0;
-        const poapRealWorldCollScore = 30;
-        const poapVitualWorldCollScore = 5;
-        const realWorldBadgePoints = 50;
-        const virtualWorldBadgePoints = 5;
+        const poapRealWorldCollScore = 10;
+        const poapVitualWorldCollScore = 3;
+        const realWorldBadgePoints = 20;
+        const virtualWorldBadgePoints = 1;
         const poapEvents = await this.poapRetriever.getPoapEvents(address);
         if(poapEvents) {
             if (poapEvents.realworld > 0){
