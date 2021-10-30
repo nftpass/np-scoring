@@ -53,7 +53,11 @@ export default class MockMongoInterface {
         console.log(`MOCK: saved collection grade of ${contract_address} with grade: ${grade}`)
     }
 
-    async setAddressScore(address: string, score: number): Promise<any> {
+    async insertAddressScore(address: string, score: number): Promise<any> {
+        console.log(`MOCK: Saved ${address} in Mongo`)
+    }
+
+    async updateAddressScore(address: string, score: number): Promise<any> {
         console.log(`MOCK: Saved ${address} in Mongo`)
     }
 }

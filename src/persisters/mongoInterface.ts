@@ -54,7 +54,7 @@ export default class MongoInterface {
         }
     }
 
-    async setAddressScore(address: string, score: number): Promise<any> {
+    async insertAddressScore(address: string, score: number): Promise<any> {
         console.log(`Attempting to save ${address} in Mongo`)
         if (this.historicalRecordsCol){
             return await this.historicalRecordsCol.insertOne({
@@ -63,6 +63,20 @@ export default class MongoInterface {
                 'inserted_at': new Date(),
                 'updated_at': new Date()
             })
+        }
+    }
+
+    async updateAddressScore(address: string, score: number): Promise<any> {
+        console.log(`Updating ${address} in Mongo with new score: ${score}`)
+        if (this.historicalRecordsCol){
+            return await this.historicalRecordsCol.updateOne({
+                'address': address
+            }, {
+                '$set': {
+                    'score': score,
+                    'updated_at': new Date()
+                }
+            }, {})
         }
     }
 }

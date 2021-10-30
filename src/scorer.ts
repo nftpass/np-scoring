@@ -50,6 +50,7 @@ class Scorer {
         const timeDeltaInHours = cachedScore ? now.diff(moment(cachedScore.updated_at), 'hours'): 0;
 
         // Apply cache if possible to avoid wasting cycles
+
         if (cachedScore && typeof cachedScore == 'object' && timeDeltaInHours < 2) {
             console.log(`Cached score is less than 2 hours`)
             console.log(`Cached score for eo_address ${address} is ${cachedScore.score}`)
@@ -61,19 +62,26 @@ class Scorer {
         const scoreComponents = computedScore.scoreComponents;
         this.firebase.persistScore(address, totalScore);
         this.firebase.persistScoreComponents(address, scoreComponents);
-        this.mongo.setAddressScore(address, totalScore);
+        if(cachedScore){
+            this.mongo.updateAddressScore(address, totalScore);
+        } else {
+            this.mongo.insertAddressScore(address, totalScore);
+        }
+        this.firebase.updateScoringProcessStatus(address, 'Done');
         return computedScore;
     }
 
     async computeScore(address: string, chain_id: number = 1): Promise<any> {
         console.log(`Computing score for eo_address: ${address}`)
+        this.firebase.updateScoringProcessStatus(address, 'Starting');
         let totalScore = 0;
         const scoreBreakdown = new ScorerBreakdownTracker(address);
+        this.firebase.updateScoringProcessStatus(address, 'Obtaining your NFTs');
         let data = await this.covalentDataRetriever.getNFTOverviewForAddress(address, chain_id, true);
         const collections = data['collections'];
         const contractAddresses = collections.map((col: any) => {return col.contract_address})
         const collGrades = await this.mongo.getNFTCollectionsScoreInBulk(contractAddresses);
-
+        this.firebase.updateScoringProcessStatus(address, 'Verifying all your NFT Collections');
 
         // Creating a map for fast retrieval
         const collGradesMap = new Map<string, CollectionGrade>();
@@ -91,6 +99,7 @@ class Scorer {
 
             //compute collection grade on the fly if we don't have it
             if (!collGrade){
+                this.firebase.updateScoringProcessStatus(address, 'Computing score for collections');
                 console.log(`Collection grade not available for ${collContractAddress}`)
                 collGrade = await this.computeAndStoreCollectionScore(collContractAddress, address);
             }
@@ -98,6 +107,7 @@ class Scorer {
             totalScore += collGrade;
             scoreBreakdown.addCollectionScoreComponent(collGrade, collName, collAddress);
 
+            this.firebase.updateScoringProcessStatus(address, 'Computing score for individual pieces');
             const pieces = collections[i].nft_data;
             if(pieces){
                 for (let j = 0; j < pieces.length; j++) {
@@ -115,8 +125,9 @@ class Scorer {
                 }
             }
         }
+        this.firebase.updateScoringProcessStatus(address, 'Checking ENS');
 
-
+        this.firebase.updateScoringProcessStatus(address, 'Checking your POAP collectibles');
         //All POAP scoring
         let poapScore = 0;
         let realWorldScore = 0;
@@ -142,6 +153,7 @@ class Scorer {
             poapScore = realWorldScore + virtualWorldScore;
 
         }
+        this.firebase.updateScoringProcessStatus(address, 'Finalizing');
 
         console.log(`Total Poapscore is ${poapScore} for ${address}`)
         console.log(`realWorldScore: ${realWorldScore} virtualWorldScore: ${virtualWorldScore}`)
@@ -149,7 +161,6 @@ class Scorer {
 
 
         console.log(`Total score computed ${totalScore} and asssigned to eo_address: ${address}`)
-        console.log(scoreBreakdown.getScoreBreakdown())
         return {
             'totalScore': totalScore,
             'scoreComponents': scoreBreakdown.getScoreBreakdown()

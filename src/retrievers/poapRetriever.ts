@@ -21,12 +21,15 @@ export default class POAPRetriever {
                 realWorldEvents++;
             }
         }
+        let totalNumberPoapEvents = 0;
+        if(poapList){
+            totalNumberPoapEvents = poapList.length;
+        }
         let events = {
             realworld : realWorldEvents,
             metaverse : metaverseEvents,
-            total : poapList.length
+            total : totalNumberPoapEvents
         }
-        console.log(events);
         return events;
     }
 

@@ -24,6 +24,10 @@ export default class MockFirebaseInterface {
         console.log(`MOCK: Assigning score breakdown to eo_address ${address} in Firebase using the path: ${path}`)
     }
 
+    async updateScoringProcessStatus(address: string, status: string){
+        console.log(`MOCK: updateScoringProcessStatus ${address}: ${status}`)
+    }
+
 }
 
 
