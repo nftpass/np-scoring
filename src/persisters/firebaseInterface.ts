@@ -44,14 +44,6 @@ export default class FirebaseInterface {
 
     async updateScoringProcessStatus(address: string, status: string) {
         const path = '/scoringStatus/' + address;
-        console.log(`Updating scoring status for ${address} to ${status}`)
-        // if (status == 'Starting'){
-        //     return set(ref(this.firebaseDB, path), {
-        //         "address": address,
-        //         "status": status,
-        //         "last_updated": new Date().toISOString()
-        //     });
-        // }
         const scoringStatusRef = this.firebaseDB.ref(path);
         scoringStatusRef.update({
             "address": address,
