@@ -1,6 +1,7 @@
 const moment = require('moment');
 import MongoInterface from "./persisters/mongoInterface";
 import FirebaseInterface from "./persisters/firebaseInterface";
+import SQSInterface from "./pusher/sqsInterface";
 import MockMongoInterface from "./persisters/mock/mockMongoInterface";
 import MockFirebaseInterface from "./persisters/mock/mockFirebaseInterface";
 
@@ -23,13 +24,16 @@ class Scorer {
     covalentDataRetriever: CovalentDataRetriever | MockCovalentDataRetriever;
     openSeaDataRetriever: OpenSeaDataRetriever | MockOpenSeaDataRetriever;
     poapRetriever: PoapRetriever | MockPoapRetriever;
-
-    constructor(mongo: MongoInterface | MockMongoInterface, firebase: FirebaseInterface | MockFirebaseInterface,
+    sqsPusher: SQSInterface
+    constructor(mongo: MongoInterface | MockMongoInterface,
+                firebase: FirebaseInterface | MockFirebaseInterface,
+                sqsPusher: SQSInterface,
                 covalentDataRetriever: CovalentDataRetriever | MockCovalentDataRetriever,
                 openSeaDataRetriever: OpenSeaDataRetriever | MockOpenSeaDataRetriever,
                 poapRetriever: PoapRetriever | MockPoapRetriever) {
         this.mongo = mongo;
         this.firebase = firebase;
+        this.sqsPusher = sqsPusher;
         this.covalentDataRetriever = covalentDataRetriever;
         this.openSeaDataRetriever = openSeaDataRetriever;
         this.poapRetriever = poapRetriever;
@@ -50,23 +54,27 @@ class Scorer {
         const timeDeltaInHours = cachedScore ? now.diff(moment(cachedScore.updated_at), 'hours'): 0;
 
         // Apply cache if possible to avoid wasting cycles
-
         if (cachedScore && typeof cachedScore == 'object' && timeDeltaInHours < 2) {
             console.log(`Cached score is less than 2 hours`)
             console.log(`Cached score for eo_address ${address} is ${cachedScore.score}`)
+            this.firebase.persistScore(address, cachedScore.score);
+            this.firebase.persistScoreComponents(address, cachedScore.score_components);
             return cachedScore;
         }
 
         const computedScore = await this.computeScore(address);
         const totalScore = computedScore.totalScore;
         const scoreComponents = computedScore.scoreComponents;
+
         this.firebase.persistScore(address, totalScore);
         this.firebase.persistScoreComponents(address, scoreComponents);
+
         if(cachedScore){
-            this.mongo.updateAddressScore(address, totalScore);
+            this.mongo.updateAddressScore(address, totalScore, scoreComponents);
         } else {
-            this.mongo.insertAddressScore(address, totalScore);
+            this.mongo.insertAddressScore(address, totalScore, scoreComponents);
         }
+
         this.firebase.updateScoringProcessStatus(address, 'Done');
         return computedScore;
     }
@@ -76,6 +84,7 @@ class Scorer {
         this.firebase.updateScoringProcessStatus(address, 'Starting');
         let totalScore = 0;
         const scoreBreakdown = new ScorerBreakdownTracker(address);
+        let collectionsWithoutPieceRanking = new Set();
         this.firebase.updateScoringProcessStatus(address, 'Obtaining your NFTs');
         let data = await this.covalentDataRetriever.getNFTOverviewForAddress(address, chain_id, true);
         const collections = data['collections'];
@@ -90,18 +99,30 @@ class Scorer {
         })
 
         //All collections retrieved from Covalent
+        let collectionsToComputeRarity = [];
         for (let i = 0; i < collections.length; i++) {
             const collContractAddress = collections[i].contract_address;
             const collGradeObj = collGradesMap.get(collContractAddress);
-            let collGrade = collGradeObj ? collGradeObj['grade'] : 1;
-            let collName = collGradeObj ? collGradeObj['name'] : '';
-            let collAddress = collGradeObj ? collGradeObj['address'] : '';
+            let collGrade = 1;
 
             //compute collection grade on the fly if we don't have it
-            if (!collGrade){
-                this.firebase.updateScoringProcessStatus(address, 'Computing score for collections');
+            if (!collGradeObj){
                 console.log(`Collection grade not available for ${collContractAddress}`)
+                this.firebase.updateScoringProcessStatus(address, 'Computing score for collections');
                 collGrade = await this.computeAndStoreCollectionScore(collContractAddress, address);
+            } else {
+                console.log(`Collection grade for ${collContractAddress} is ${collGradeObj['grade']}`)
+                collGrade = collGradeObj ? collGradeObj['grade'] : 1;
+            }
+
+            let collName = collGradeObj ? collGradeObj['name'] : collections[i]['contract_name'];
+            let collAddress = collGradeObj ? collGradeObj['address'] : collections[i]['contract_address'];
+            let collAreTokensRanked = collGradeObj ? collGradeObj['are_tokens_ranked'] : false;
+            let collRankedSupply = collGradeObj ? collGradeObj['ranked_supply'] : 10000;
+
+            // if the collection has not been ranked, adding to set to be sent later for processing
+            if(!collAreTokensRanked){
+                collectionsWithoutPieceRanking.add(collContractAddress)
             }
 
             totalScore += collGrade;
@@ -111,21 +132,36 @@ class Scorer {
             const pieces = collections[i].nft_data;
             if(pieces){
                 for (let j = 0; j < pieces.length; j++) {
-                    // piece score = collectior_score * price component
-                    // @todo: add the individual piece price
-                    let pieceScore = collGrade * 1
-                    const piece = pieces[j]
+                    // piece score is defaulted to collection grade
+                    let pieceScore = collGrade * 1;
+                    const piece = pieces[j];
                     if(piece){
-                        const imageURI = piece.external_data.image_512
+                        const imageURI = piece.external_data && piece.external_data.image_512
                         const tokenId = piece.token_id
-                        scoreBreakdown.addIndividualPieceScoreComponent(collGrade, collName, collAddress, tokenId, imageURI);
+                        let otherData = {
+                            'rank': undefined,
+                            'supply': undefined
+                        }
+                        // if piece in collection is ranked, then use rank in computation of pieceScore
+                        if(collAreTokensRanked){
+                            let rank = await this.mongo.getNFTPieceRankInCollection(collContractAddress.toLowerCase(), parseInt(tokenId));
+                            rank = rank.token_rank;
+                            console.log(` ${tokenId} - ${collContractAddress} rank is ${rank}`)
+                            pieceScore = rank ? Math.round(collGrade * collRankedSupply / rank) : pieceScore;
+                            console.log(pieceScore)
+                            otherData = {
+                                'rank': rank,
+                                'supply': collRankedSupply
+                            }
+                        }
+                        scoreBreakdown.addIndividualPieceScoreComponent(pieceScore, collName, collAddress,
+                            tokenId, imageURI, otherData);
                     }
                     // @todo: if minted, then dobule piece score
                     totalScore += pieceScore
                 }
             }
         }
-        this.firebase.updateScoringProcessStatus(address, 'Checking ENS');
 
         this.firebase.updateScoringProcessStatus(address, 'Checking your POAP collectibles');
         //All POAP scoring
@@ -161,6 +197,15 @@ class Scorer {
 
 
         console.log(`Total score computed ${totalScore} and asssigned to eo_address: ${address}`)
+
+        //sending all collections without piece ranking to be computed
+        let arrCollectionsWithoutPieceRanking = [...collectionsWithoutPieceRanking];
+        arrCollectionsWithoutPieceRanking.forEach((collectionAddress: any) => {
+            console.log(`Attempting to send message to rarity queue: ${collectionAddress}`);
+            this.sqsPusher.sendMessage({}, collectionAddress.toLowerCase(), (success: any) => {
+                console.log(`Sent message to rarity queue for contact: ${collectionAddress}`);
+            })
+        })
         return {
             'totalScore': totalScore,
             'scoreComponents': scoreBreakdown.getScoreBreakdown()

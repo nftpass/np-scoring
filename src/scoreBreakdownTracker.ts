@@ -23,14 +23,22 @@ export default class ScorerBreakdownTracker {
         return this.tracker;
     }
 
-    addIndividualPieceScoreComponent(score: number, colName: string, colAddress: string, pieceId: string, mediaURI: string): Array<ScoreComponent>{
+    addIndividualPieceScoreComponent(score: number, colName: string, colAddress: string,
+                                     pieceId: string, mediaURI: string, data: any): Array<ScoreComponent>{
+        const keys = Object.keys(data);
+        keys.forEach((key: string) => {
+            if (data[key] === undefined){
+                delete data[key]
+            }
+        })
         this.tracker.push({
             'type': 'piece',
             'pieceID': pieceId || '',
             'collectionName': colName,
             'points': score,
             'contractAddress': colAddress,
-            'mediaURI': mediaURI || process.env.DEFAULT_IMAGE || ''
+            'mediaURI': mediaURI || process.env.DEFAULT_IMAGE || '',
+            'data': data || {}
         })
         return this.tracker;
     }

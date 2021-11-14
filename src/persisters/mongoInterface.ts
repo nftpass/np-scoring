@@ -3,18 +3,18 @@ import * as mongoDB from "mongodb";
 export default class MongoInterface {
     client: mongoDB.MongoClient;
     db_name: string;
-    col_name: string;
     historicalRecordsCol: mongoDB.Collection | undefined;
     nftCollectionScoreCol: mongoDB.Collection | undefined;
+    nftPiecesRankCol: mongoDB.Collection | undefined;
     db: mongoDB.Db | undefined;
 
-    constructor(mongo_uri: string, db_name: string, col_name: string) {
+    constructor(mongo_uri: string, db_name: string) {
         this.client = new mongoDB.MongoClient(mongo_uri);
         this.db_name = db_name;
-        this.col_name = col_name;
         this.db = undefined;
         this.historicalRecordsCol = undefined;
         this.nftCollectionScoreCol = undefined;
+        this.nftPiecesRankCol = undefined;
     }
 
     async init(){
@@ -22,6 +22,7 @@ export default class MongoInterface {
         this.db = this.client.db(this.db_name);
         this.historicalRecordsCol = this.db.collection('historicalRecords');
         this.nftCollectionScoreCol = this.db.collection('nftCollectionScore');
+        this.nftPiecesRankCol = this.db.collection('nftPieces');
     }
 
     async getAddressHistoricalScore(address: string): Promise<any> {
@@ -54,29 +55,43 @@ export default class MongoInterface {
         }
     }
 
-    async insertAddressScore(address: string, score: number): Promise<any> {
+    async insertAddressScore(address: string, score: number, score_components: any): Promise<any> {
         console.log(`Attempting to save ${address} in Mongo`)
         if (this.historicalRecordsCol){
             return await this.historicalRecordsCol.insertOne({
                 'address': address,
                 'score': score,
+                'score_components': score_components,
                 'inserted_at': new Date(),
                 'updated_at': new Date()
             })
         }
     }
 
-    async updateAddressScore(address: string, score: number): Promise<any> {
+    async updateAddressScore(address: string, score: number, score_components: any): Promise<any> {
         console.log(`Updating ${address} in Mongo with new score: ${score}`)
         if (this.historicalRecordsCol){
+            let updateDict: any = {
+                'score': score,
+                'updated_at': new Date(),
+            }
+            if(score_components){
+                updateDict['score_component'] = score_components;
+            }
             return await this.historicalRecordsCol.updateOne({
                 'address': address
             }, {
-                '$set': {
-                    'score': score,
-                    'updated_at': new Date()
-                }
+                '$set': updateDict
             }, {})
+        }
+    }
+
+    async getNFTPieceRankInCollection(contract_address: string, token_id: number): Promise<any> {
+        if (this.nftPiecesRankCol){
+            return await this.nftPiecesRankCol.findOne({
+                'contract_address': contract_address,
+                'token_id': token_id
+            })
         }
     }
 }

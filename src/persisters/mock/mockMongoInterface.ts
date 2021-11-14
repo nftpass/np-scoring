@@ -54,11 +54,23 @@ export default class MockMongoInterface {
     }
 
     async insertAddressScore(address: string, score: number): Promise<any> {
-        console.log(`MOCK: Saved ${address} in Mongo`)
+        console.log(`MOCK: insertAddressScore ${address} in Mongo`)
     }
 
-    async updateAddressScore(address: string, score: number): Promise<any> {
-        console.log(`MOCK: Saved ${address} in Mongo`)
+    async updateAddressScore(address: string, score: number, score_components: dict): Promise<any> {
+        console.log(`MOCK: updateAddressScore ${address} in Mongo`)
+    }
+
+    async getNFTPieceRankInCollection(contract_address: string, token_id: number): Promise<any> {
+        return {
+            'address': address,
+            'grade': 100,
+            'name': 'MockCollection' + index,
+            'inserted_at': new Date(),
+            'updated_at': new Date(),
+            'are_tokens_ranked': true,
+            'ranked_supply': 9844
+        }
     }
 }
 

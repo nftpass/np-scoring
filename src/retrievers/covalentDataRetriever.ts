@@ -58,7 +58,6 @@ export default class CovalentDataRetriever {
         if (transactions && transactions.data){
             transactions.data.items[0].nft_transactions.forEach((transaction: any) => {
                 const blockSignedDate = new Date(transaction.block_signed_at);
-                console.log(blockSignedDate)
                 if (earliestDate > blockSignedDate) {
                     earliestDate = blockSignedDate
                 }
